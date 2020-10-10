@@ -1,0 +1,173 @@
+' https://towardsdatascience.com/writing-a-production-level-machine-learning-framework-lessons-learned-195ce21dd437
+@startuml
+skinparam classAttributeIconSize 0
+skinparam dpi 380
+
+class MetricsWriter {
++recordMetrics(Meter,iteration)
+}
+
+class TensorBoardMetricsWriter {
+    +recordMetrics(Meter,iteration)
+}
+
+
+class Engine{
+    -model: torch.nn.Module
+    -optimizer: torch.optim.Optimizer
+    -scheduler: torch.optim.Scheduler
+    -train_loss: Loss
+    -test_losses: Dict[str, loss]
+    -scorer: Scorer
+    -metrics_writer: MetricsWriter
+    -logger: logging.Logger
+    -iteration: int
+    -train_stats: Dict[str, Meter]
+    -test_stats: Dict[str, Meter]
+    -train_data: torch.utils.data.DataLoader
+    -test_data: torch.utils.data.DataLoader
+    -score_data: torch.utils.data.DataLoader
+
+    +train()
+    +score()
+    -apply_model(MinibatchData): torch.nn.Tensor
+    -save_checkpoint()
+    -load_checkpoint()
+
+}
+
+
+
+class LaunchManager {
+    +config: Config
+    +mode: enum
+    +path: Path
+
+    +launch(Config)
+    -create_dir()
+    -diff_config(Config, Config)
+    -validate_config(Config)
+}
+
+class ModelRegistry {
+    +register(torch.nn.Module)
+    +create_model(torch.nn.Moudle)
+}
+
+
+class CustomModel{
+    +forward()
+}
+
+class MultiLayerPerceptron{
+    -filters_per_layer
+    -activation_type
+    -normalization
+    -dropout
+
+    +forward()
+}
+
+class "torch．nn．Module" {
+}
+
+class Scorer {
+    -buffer: BatchData
+    
+    +add(BatchData)
+    +post_process()
+    -flush()
+}
+
+
+class Meter {
+    +update()
+    +mean()
+    +std()
+}
+
+
+class MiniBatchData {
+    +inputs: Dict[str, torch.Tensor]
+    +labels: Dict[str, torch.Tensor]
+    +metadata: List
+}
+
+
+class "torch．utils．data．DataLoader"{
+    -dataset: CustomDataSet
+    -sampler: CustomSampler
+    -collate_fn: MiniBatchCollator
+
+    + __next__(): MinibatchData
+
+}
+
+class MiniBatchCollator{
+    -transforms: List[Transform]
+
+    + collate(List[Example]): MinibatchData
+}
+
+
+class MiniBatchTransform{
+    +transform(MiniBatchData)
+}
+
+
+class CustomDataSet{
+    -metadata_index
+    -data_accessor: FileReader
+    -cache: Cache
+
+    +__getitem__()
+}
+
+class "torch．utils．data．DataSet"{
+    +__getitem__()
+}
+
+
+class CustomSampler {
+    +__iter__()
+    +__len__()
+}
+
+
+class "torch．utils．data．Sampler"{
+    +__iter__()
+    +__len__()
+}
+
+
+
+
+/' single-line comment
+ここから、関連
+'/
+MetricsWriter <|-down- TensorBoardMetricsWriter
+Engine  o-up- TensorBoardMetricsWriter
+LaunchManager .right. Engine
+ModelRegistry .up. LaunchManager
+ModelRegistry .down. "*" CustomModel
+Engine o-down- CustomModel
+MultiLayerPerceptron "*" o-left- CustomModel
+"torch．nn．Module" <|-up- CustomModel
+"torch．nn．Module" <|-up- MultiLayerPerceptron
+Engine o-down- Scorer
+Engine o-right- "*" Meter
+Engine .right. MiniBatchData
+MiniBatchData .right. "torch．utils．data．DataLoader"
+"torch．utils．data．DataLoader" o-up- MiniBatchCollator
+MiniBatchCollator o-up- "*" MiniBatchTransform
+
+"torch．utils．data．DataLoader" o-down- CustomDataSet
+"torch．utils．data．DataSet" <|-up- CustomDataSet
+
+"torch．utils．data．DataLoader" o-down- CustomSampler
+"torch．utils．data．Sampler" <|-up- CustomSampler
+
+ModelRegistry -[hidden]- Engine
+MultiLayerPerceptron -[hidden]- Scorer
+
+@enduml
